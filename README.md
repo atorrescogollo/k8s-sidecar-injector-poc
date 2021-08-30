@@ -12,22 +12,29 @@ export VERSION="main"
 curl -s https://raw.githubusercontent.com/atorrescogollo/k8s-volume-injector/${VERSION}/deploy/install.sh | bash
 ```
 
+### Check installation
 ```bash
-# Check installation
-$ kubectl -n k8s-volume-injector get mutatingwebhookconfigurations,svc,deploy
-NAME                                                                            WEBHOOKS   AGE
-mutatingwebhookconfiguration.admissionregistration.k8s.io/k8s-volume-injector   1          1h
+$ kubectl -n k8s-volume-injector get mutatingwebhookconfigurations k8s-volume-injector
+NAME                  WEBHOOKS   AGE
+k8s-volume-injector   1          4m49s
+
+$ kubectl -n k8s-volume-injector get all
+NAME                                       READY   STATUS    RESTARTS   AGE
+pod/k8s-volume-injector-595b896796-fp8bc   1/1     Running   0          5m12s
 
 NAME                          TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)   AGE
-service/k8s-volume-injector   ClusterIP   10.233.62.149   <none>        443/TCP   1h
+service/k8s-volume-injector   ClusterIP   10.233.49.141   <none>        443/TCP   5m12s
 
 NAME                                  READY   UP-TO-DATE   AVAILABLE   AGE
-deployment.apps/k8s-volume-injector   1/1     1            1           1h
+deployment.apps/k8s-volume-injector   1/1     1            1           5m12s
 
-# Apply an example (demo1)
-kubectl apply -f examples/demo1.yaml
+NAME                                             DESIRED   CURRENT   READY   AGE
+replicaset.apps/k8s-volume-injector-595b896796   1         1         1       5m12s
 ```
 ```bash
+# Apply an example (demo1)
+$ kubectl apply -f https://raw.githubusercontent.com/atorrescogollo/k8s-volume-injector/main/examples/demo1.yaml
+
 # Check if the webhook has work (mounts /etc/ssl/certs from node)
 $ kubectl -n k8s-volume-injector-demo1 get po demo1 -o json | jq '.spec.volumes[]|select(.name=="etc-ssl-certs")'
 {
