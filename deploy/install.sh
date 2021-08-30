@@ -30,6 +30,7 @@ function main(){
 }
 
 function downloadTemplates(){
+    echo "[*] Downloading templates..."
     local rootdir="$1"
     mkdir -p "$rootdir/manifests/"
     for i in namespace certificate deployment webhook
@@ -44,6 +45,7 @@ function renderAndApply(){
     local rootdir="$1"
     mkdir -p "$rootdir/_gen"
 
+    echo "[*] Creating namespace, certificate and deployment..."
     cat "$rootdir/manifests/namespace.yaml.template" \
         | sed 's@${NAMESPACE}@'$NAMESPACE'@g' \
         > "$rootdir/_gen/namespace.yaml"
@@ -59,7 +61,16 @@ function renderAndApply(){
     kubectl apply -f "$rootdir/_gen/certificate.yaml"
     kubectl apply -f "$rootdir/_gen/deployment.yaml"
 
-    local caBundle=$( kubectl get secrets -n $NAMESPACE k8s-volume-injector-cert -o go-template="{{ index .data \"ca.crt\"}}" )
+
+    echo "[*] Waiting until certificate ca.crt is ready ..."
+    local caBundle=""
+    until ! test -z "$caBundle"
+    do
+        sleep 1
+        caBundle=$( kubectl get secrets -n $NAMESPACE k8s-volume-injector-cert -o go-template="{{ index .data \"ca.crt\"}}" 2>/dev/null )
+    done
+
+    echo "[*] Creating webhook ..."
     cat "$rootdir/manifests/webhook.yaml.template" \
         | sed 's@${NAMESPACE}@'$NAMESPACE'@g' \
         | sed 's@${CABUNDLE}@'$caBundle'@g' \
