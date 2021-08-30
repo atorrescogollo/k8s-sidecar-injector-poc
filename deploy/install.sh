@@ -34,7 +34,7 @@ function downloadTemplates(){
     mkdir -p "$rootdir/manifests/"
     for i in namespace certificate deployment webhook
     do
-        wget -O "$rootdir/manifests/$i.yaml" \
+        wget -qO "$rootdir/manifests/$i.yaml.template" \
             "$REPO_RAW_BASE_URL/manifests/$i.yaml.template"
     done
 }
