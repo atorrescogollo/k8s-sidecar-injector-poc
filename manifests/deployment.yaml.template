@@ -1,0 +1,116 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: k8s-volume-injector
+  namespace: ${NAMESPACE}
+  labels:
+    kubernetes.io/cluster-service: "true"
+    addonmanager.kubernetes.io/mode: Reconcile
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: k8s-volume-injector
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "watch", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: k8s-volume-injector
+subjects:
+  - kind: ServiceAccount
+    name: k8s-volume-injector
+    namespace: ${NAMESPACE}
+roleRef:
+  kind: ClusterRole
+  name: k8s-volume-injector
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: k8s-volume-injector
+  namespace: ${NAMESPACE}
+spec:
+  ports:
+    - name: https
+      port: 443
+      targetPort: https
+      protocol: TCP
+  selector:
+    app.kubernetes.io/part-of: k8s-volume-injector
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: k8s-volume-injector
+  namespace: ${NAMESPACE}
+  labels:
+    app.kubernetes.io/part-of: k8s-volume-injector
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/part-of: k8s-volume-injector
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/part-of: k8s-volume-injector
+    spec:
+      serviceAccountName: k8s-volume-injector
+      volumes:
+      - name: certs
+        secret:
+          secretName: k8s-volume-injector-cert
+      containers:
+      - name: k8s-volume-injector
+        imagePullPolicy: Always
+        image: tumblr/k8s-sidecar-injector:${INJECTOR_VERSION_TAG}
+        command: ["entrypoint.sh"]
+        args: []
+        ports:
+        - name: https
+          containerPort: 9443
+        - name: http-metrics
+          containerPort: 9000
+        volumeMounts:
+        - name: certs
+          mountPath: /var/lib/certs
+        livenessProbe:
+          httpGet:
+            scheme: HTTPS
+            path: /health
+            port: https
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 3
+        #resources:
+        #  requests:
+        #    cpu: "0.3"
+        #    memory: "0.5Gi"
+        #  limits:
+        #    cpu: "0.5"
+        #    memory: 2Gi
+        env:
+        - name: "TLS_CERT_FILE"
+          value: "/var/lib/certs/tls.crt"
+        - name: "TLS_KEY_FILE"
+          value: "/var/lib/certs/tls.key"
+        - name: "LOG_LEVEL"
+          value: "2"
+        - name: "CONFIG_DIR"
+          value: "conf/"
+        - name: "CONFIGMAP_LABELS"
+          value: "app.kubernetes.io/part-of=k8s-volume-injector"
+        - name: ANNOTATION_NAMESPACE
+          value: k8s-volume-injector

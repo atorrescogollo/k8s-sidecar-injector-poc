@@ -1,0 +1,44 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    k8s-volume-injector: "true"
+  name: k8s-volume-injector-demo1
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: demo1
+  namespace: k8s-volume-injector-demo1
+  annotations:
+    k8s-volume-injector/request: "etc-ssl-certs"
+spec:
+  containers:
+  - name: demo1
+    image: alpine
+    command:
+      - sh
+      - -xc
+    args:
+      - >
+        while true; do sleep 1000; done
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: etc-ssl-certs
+  namespace: k8s-volume-injector
+  labels:
+    app.kubernetes.io/part-of: k8s-volume-injector
+data:
+  etc-ssl-certs: |
+    name: etc-ssl-certs
+    volumes:
+    - name: etc-ssl-certs
+      hostPath:
+        path: /etc/ssl/certs/
+    volumeMounts:
+    - name: etc-ssl-certs
+      mountPath: /etc/ssl/certs/
+      readOnly: true
