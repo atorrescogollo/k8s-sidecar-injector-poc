@@ -1,4 +1,4 @@
-# k8s-volume-injector
+# k8s-sidecar-injector-poc
 Mount volumes to workloads using MutatingWebhookConfiguration. Based on: https://github.com/tumblr/k8s-sidecar-injector
 
 
